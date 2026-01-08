@@ -45,6 +45,30 @@
 
 ---
 
+# 📁 GitHub Repo Structure
+
+```
+aks-production-microservices/
+│
+├── app/
+│   ├── app.py
+│   ├── Dockerfile
+│
+├── k8s/
+│   ├── namespace.yaml
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   ├── rbac.yaml
+│
+├── .github/workflows/
+│   └── deploy.yaml
+│
+└── README.md
+```
+
+---
+
 ## 🧱 Project Overview
 
 **Project Name:** `aks-production-microservices`
@@ -376,38 +400,15 @@ jobs:
 
 # 8️⃣ Production Best Practices Checklist ✅
 
-✔ Multi-node AKS
-✔ Rolling updates
-✔ Resource limits
-✔ Secrets (no plain text)
-✔ Ingress TLS ready
-✔ Autoscaling
-✔ Monitoring
-✔ RBAC
-✔ Namespace isolation
+- ✔ Multi-node AKS
+- ✔ Rolling updates
+- ✔ Resource limits
+- ✔ Secrets (no plain text)
+- ✔ Ingress TLS ready
+- ✔ Autoscaling
+- ✔ Monitoring
+- ✔ RBAC
+- ✔ Namespace isolation
 
 ---
 
-# 📁 Recommended GitHub Repo Structure
-
-```
-aks-production-microservices/
-│
-├── app/
-│   ├── app.py
-│   ├── Dockerfile
-│
-├── k8s/
-│   ├── namespace.yaml
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   ├── ingress.yaml
-│   ├── rbac.yaml
-│
-├── .github/workflows/
-│   └── deploy.yaml
-│
-└── README.md
-```
-
----
