@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  flask-app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: aks-prod-app
+    ports:
+      - "5000:5000"
+    environment:
+      - ENVIRONMENT=development
+      - FLASK_ENV=development
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

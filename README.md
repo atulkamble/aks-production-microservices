@@ -32,6 +32,26 @@
 <strong>Version 1.0.0</strong> | <strong>Last Updated:</strong> January 2026
 </div>
 
+```
+cd /Users/atul/Downloads/aks-production-microservices/app && pip3 install -r requirements.txt
+
+python3 app/app.py
+
+# Test the running application
+./scripts/test-local.sh
+
+# Run with Docker
+docker-compose up -d
+
+# Build and push to Docker Hub (update image name first)
+docker build -t atuljkamble/aks-prod-app:v1 ./app
+docker push atuljkamble/aks-prod-app:v1
+
+# Deploy to Azure AKS
+./scripts/setup-aks.sh  # One-time cluster setup
+./scripts/deploy.sh     # Deploy application
+
+```
 
 ![Image](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/hybrid/media/aks-azure-architecture.png)
 
