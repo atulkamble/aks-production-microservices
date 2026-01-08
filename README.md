@@ -1,5 +1,5 @@
 <div align="center">
-<h1>🚀 MyApp</h1>
+<h1> 🚀 Kubernetes Production-Ready Project (AKS) </h1>
 <p><strong>Built with ❤️ by <a href="https://github.com/atulkamble">Atul Kamble</a></strong></p>
 
 <p>
@@ -31,3 +31,383 @@
 
 <strong>Version 1.0.0</strong> | <strong>Last Updated:</strong> January 2026
 </div>
+
+
+![Image](https://learn.microsoft.com/en-us/azure/architecture/example-scenario/hybrid/media/aks-azure-architecture.png)
+
+![Image](https://learn.microsoft.com/en-us/azure/architecture/reference-architectures/containers/aks-microservices/images/microservices-architecture.svg)
+
+![Image](https://platform9.com/media/kubernetes-constructs-concepts-architecture.jpg)
+
+![Image](https://kubernetes.io/images/docs/kubernetes-cluster-architecture.svg)
+
+![Image](https://phoenixnap.com/kb/wp-content/uploads/2021/04/full-kubernetes-model-architecture.png)
+
+---
+
+## 🧱 Project Overview
+
+**Project Name:** `aks-production-microservices`
+**Cloud:** Azure
+**Kubernetes:** Azure Kubernetes Service
+**App:** Python Flask API (can swap with Node/Java)
+**CI/CD:** GitHub Actions
+**Ingress:** NGINX Ingress Controller
+**Security:** RBAC, NetworkPolicy, Secrets
+**Observability:** Prometheus + Grafana
+**Scaling:** HPA + Cluster Autoscaler
+
+---
+
+## 🏗️ Production Architecture
+
+```
+Internet
+   |
+Azure Load Balancer
+   |
+NGINX Ingress Controller
+   |
+Kubernetes Services (ClusterIP)
+   |
+Pods (ReplicaSets)
+   |
+Azure Managed Disk / Azure Files
+```
+
+---
+
+## 👥 Kubernetes Roles & Responsibilities (IMPORTANT)
+
+| Role                  | Responsibility                       |
+| --------------------- | ------------------------------------ |
+| **Cloud Architect**   | Infra design, AKS sizing, networking |
+| **DevOps Engineer**   | CI/CD, manifests, automation         |
+| **Platform Engineer** | Cluster security, policies           |
+| **Developer**         | App, Dockerfile                      |
+| **SRE**               | Monitoring, scaling, reliability     |
+| **Security Engineer** | RBAC, secrets, policies              |
+
+---
+
+# 1️⃣ Cloud Architect – AKS Production Setup
+
+## 🔹 Step 1: Resource Group
+
+```bash
+az group create \
+  --name aks-prod-rg \
+  --location eastus
+```
+
+---
+
+## 🔹 Step 2: Create AKS Cluster (Production)
+
+```bash
+az aks create \
+  --resource-group aks-prod-rg \
+  --name aks-prod-cluster \
+  --node-count 3 \
+  --node-vm-size Standard_DS3_v2 \
+  --enable-managed-identity \
+  --enable-addons monitoring \
+  --enable-cluster-autoscaler \
+  --min-count 3 \
+  --max-count 6 \
+  --network-plugin azure \
+  --generate-ssh-keys
+```
+
+✅ **Production Features Enabled**
+
+* Managed Identity
+* Autoscaling
+* Azure CNI
+* Monitoring
+
+---
+
+## 🔹 Step 3: Connect to Cluster
+
+```bash
+az aks get-credentials \
+  --resource-group aks-prod-rg \
+  --name aks-prod-cluster
+```
+
+```bash
+kubectl get nodes
+```
+
+---
+
+# 2️⃣ Developer – Application & Docker
+
+## 🔹 Flask App (`app.py`)
+
+```python
+from flask import Flask
+app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return "AKS Production App Running!"
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+```
+
+---
+
+## 🔹 Dockerfile
+
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY . .
+RUN pip install flask
+EXPOSE 5000
+CMD ["python", "app.py"]
+```
+
+---
+
+## 🔹 Build & Push Image
+
+```bash
+docker build -t atuljkamble/aks-prod-app:v1 .
+docker push atuljkamble/aks-prod-app:v1
+```
+
+---
+
+# 3️⃣ DevOps Engineer – Kubernetes Manifests
+
+---
+
+## 🔹 Namespace
+
+```yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prod
+```
+
+```bash
+kubectl apply -f namespace.yaml
+```
+
+---
+
+## 🔹 Deployment (Production Ready)
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-app
+  namespace: prod
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app: flask
+  template:
+    metadata:
+      labels:
+        app: flask
+    spec:
+      containers:
+      - name: flask
+        image: atuljkamble/aks-prod-app:v1
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "256Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+```
+
+---
+
+## 🔹 Service
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-service
+  namespace: prod
+spec:
+  type: ClusterIP
+  selector:
+    app: flask
+  ports:
+  - port: 80
+    targetPort: 5000
+```
+
+---
+
+# 4️⃣ Platform Engineer – Ingress & Networking
+
+![Image](https://docs.nginx.com/nic/ic-high-level.png)
+
+![Image](https://learn.microsoft.com/en-us/azure/aks/media/concepts-network/aks-ingress.png)
+
+## 🔹 Install NGINX Ingress
+
+```bash
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm install nginx ingress-nginx/ingress-nginx
+```
+
+---
+
+## 🔹 Ingress Resource
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: flask-ingress
+  namespace: prod
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: flask.prod.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: flask-service
+            port:
+              number: 80
+```
+
+---
+
+# 5️⃣ Security Engineer – RBAC & Secrets
+
+## 🔹 Secret
+
+```bash
+kubectl create secret generic app-secret \
+  --from-literal=DB_PASSWORD=Prod@123 \
+  -n prod
+```
+
+---
+
+## 🔹 RBAC (Read-Only User)
+
+```yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: prod
+  name: readonly
+rules:
+- apiGroups: [""]
+  resources: ["pods","services"]
+  verbs: ["get","list"]
+```
+
+---
+
+# 6️⃣ SRE – Autoscaling & Monitoring
+
+![Image](https://miro.medium.com/v2/resize%3Afit%3A1400/1%2A0wJBUCAWTLAe62PHmhoLOQ.gif)
+
+![Image](https://miro.medium.com/v2/resize%3Afit%3A1200/1%2AqBwb4cI9dTYInvlo2oD3LA.png)
+
+## 🔹 HPA
+
+```bash
+kubectl autoscale deployment flask-app \
+  --cpu-percent=70 \
+  --min=3 \
+  --max=10 \
+  -n prod
+```
+
+---
+
+## 🔹 Prometheus + Grafana
+
+```bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm install monitoring prometheus-community/kube-prometheus-stack
+```
+
+---
+
+# 7️⃣ CI/CD – GitHub Actions
+
+```yaml
+name: AKS Deploy
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - run: |
+        kubectl apply -f k8s/
+```
+
+---
+
+# 8️⃣ Production Best Practices Checklist ✅
+
+✔ Multi-node AKS
+✔ Rolling updates
+✔ Resource limits
+✔ Secrets (no plain text)
+✔ Ingress TLS ready
+✔ Autoscaling
+✔ Monitoring
+✔ RBAC
+✔ Namespace isolation
+
+---
+
+# 📁 Recommended GitHub Repo Structure
+
+```
+aks-production-microservices/
+│
+├── app/
+│   ├── app.py
+│   ├── Dockerfile
+│
+├── k8s/
+│   ├── namespace.yaml
+│   ├── deployment.yaml
+│   ├── service.yaml
+│   ├── ingress.yaml
+│   ├── rbac.yaml
+│
+├── .github/workflows/
+│   └── deploy.yaml
+│
+└── README.md
+```
+
+---
